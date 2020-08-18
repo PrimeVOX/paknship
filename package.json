@@ -1,0 +1,26 @@
+{
+  "name": "paknship",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "license": "MIT",
+  "description": "CLI and lib access to PDF generation and mailing scenarios",
+  "repository": "https://github.com/primevox/paknship.git",
+  "author": "Aaron Hazelton <abhazelton@gmail.com>",
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": [],
+  "devDependencies": {
+    "@types/node": "^14.0.27",
+    "typescript": "^3.9.7"
+  },
+  "dependencies": {
+    "axios": "^0.19.2",
+    "dotenv": "^8.2.0",
+    "fs-extra": "^9.0.1",
+    "gunr": "https://github.com/primevox/gunr",
+    "p-map": "^4.0.0",
+    "rimraf": "^3.0.2",
+    "titere": "https://github.com/primevox/titere"
+  }
+}
