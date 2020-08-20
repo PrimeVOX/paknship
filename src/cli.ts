@@ -1,13 +1,10 @@
-import { existsSync, readFileSync } from 'fs';
+import { pathExists, readJson } from 'fs-extra';
 import rimraf from 'rimraf';
 import { invoice } from './api';
-import { init } from './init';
 import { inline } from 'titere';
+import { me } from './utils';
 
 function cli() {
-
-  // make sure we have some base directories
-  init();
 
   // handle args
   let argv = process.argv.slice(2);
@@ -24,19 +21,19 @@ function cli() {
     const help = `
     Pak'n'Ship
     Commands:
-      invoice [token] [...]         Send invoice(s) using token(s) supplied.
+      invoice /path/to/file.json    Send invoice(s) using specified file.
       inline  <url|string>          Generate single PDF from URL or HTML string, 
                                       returned as Buffer.
     Options:
       -h, --help    displays help.
     `;
     console.log(help);
-    process.exit();
+    return;
   }
 
   if (!cmd) {
-    console.error(`A task to run must be specified.`);
-    process.exit();
+    process.stderr.write(`A task to run must be specified.`, 'utf-8');
+    return;
   }
   
   ///////////////////////////////
@@ -46,33 +43,37 @@ function cli() {
   if (cmd === 'invoice') {
 
     if (!argv.length) {
-      console.error('No JSON config file was specified to process and send.');
-      process.exit();  
+      process.stderr.write('No JSON config file was specified to process and send.', 'utf-8');
+      return;  
     }
 
     (async () => {
 
-      // these are kept relative to this package
-      const path = process.cwd() + '/configs/' + argv;
+      // should only be a file path, any other args ignored
+      const path = argv.shift();
 
       // check for file
-      if (!existsSync(path)) {
-        process.stderr.write('Could not open JSON config file. This was passed as an argument: ' + argv);
-        process.exit();
+      const exists = await pathExists(path);
+
+      if (!exists) {
+        process.stderr.write('Could not open JSON config file. This was passed as an argument: ' + argv, 'utf-8');
+        return;
       }
 
       // try to read it
-      const trkIds = JSON.parse(readFileSync(path, 'utf-8').toString());
+      const { err, data } = await me<string[]>(readJson(path));
 
-      const response = await invoice(trkIds);
-      process.stdout.write(JSON.stringify(response));
+      if (err) {
+        process.stderr.write('Could not open JSON config file. This was passed as an argument: ' + argv, 'utf-8');
+        return;
+      }
+
+      const response = await invoice(data);
+      process.stdout.write(JSON.stringify(response), 'utf-8');
 
       // remove config file, no longer needed since it was completed
-      rimraf(path, () => {
-        // we don't really care too much, but rimraf requires a cb
-      });
-
-      process.exit();
+      // we don't really care too much what happens, but rimraf requires a cb
+      rimraf(path, () => { });
 
     })();
 
@@ -88,8 +89,8 @@ function cli() {
 
     // can only accept one incoming param, all others ignored
     if (!urlOrHtml) {
-      console.error('A URL or string of HTML must be specified.');
-      process.exit();  
+      process.stderr.write('A URL or string of HTML must be specified.', 'utf-8');
+      return;  
     }
 
     (async () => {
@@ -97,11 +98,9 @@ function cli() {
       const buf = await inline(urlOrHtml);
 
       if (buf)
-        process.stdout.write(buf);
+        process.stdout.write(buf, 'utf-8');
       else
-        process.stderr.write('PDF could not be created.\n');
-
-      process.exit();
+        process.stderr.write('PDF could not be created.\n', 'utf-8');
 
     })();
 

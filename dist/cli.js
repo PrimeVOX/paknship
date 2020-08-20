@@ -12,14 +12,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const fs_1 = require("fs");
+const fs_extra_1 = require("fs-extra");
 const rimraf_1 = __importDefault(require("rimraf"));
 const api_1 = require("./api");
-const init_1 = require("./init");
 const titere_1 = require("titere");
+const utils_1 = require("./utils");
 function cli() {
-    // make sure we have some base directories
-    init_1.init();
     // handle args
     let argv = process.argv.slice(2);
     const isHelp = argv.includes('-h') || argv.includes('--help');
@@ -31,44 +29,47 @@ function cli() {
         const help = `
     Pak'n'Ship
     Commands:
-      invoice [token] [...]         Send invoice(s) using token(s) supplied.
+      invoice /path/to/file.json    Send invoice(s) using specified file.
       inline  <url|string>          Generate single PDF from URL or HTML string, 
                                       returned as Buffer.
     Options:
       -h, --help    displays help.
     `;
         console.log(help);
-        process.exit();
+        return;
     }
     if (!cmd) {
-        console.error(`A task to run must be specified.`);
-        process.exit();
+        process.stderr.write(`A task to run must be specified.`, 'utf-8');
+        return;
     }
     ///////////////////////////////
     // INVOICE
     ///////////////////////////////
     if (cmd === 'invoice') {
         if (!argv.length) {
-            console.error('No JSON config file was specified to process and send.');
-            process.exit();
+            process.stderr.write('No JSON config file was specified to process and send.', 'utf-8');
+            return;
         }
         (() => __awaiter(this, void 0, void 0, function* () {
-            // these are kept relative to this package
-            const path = process.cwd() + '/configs/' + argv;
+            // should only be a file path, any other args ignored
+            const path = argv.shift();
             // check for file
-            if (!fs_1.existsSync(path)) {
-                process.stderr.write('Could not open JSON config file. This was passed as an argument: ' + argv);
-                process.exit();
+            const exists = yield fs_extra_1.pathExists(path);
+            if (!exists) {
+                process.stderr.write('Could not open JSON config file. This was passed as an argument: ' + argv, 'utf-8');
+                return;
             }
             // try to read it
-            const trkIds = JSON.parse(fs_1.readFileSync(path, 'utf-8').toString());
-            const response = yield api_1.invoice(trkIds);
-            process.stdout.write(JSON.stringify(response));
+            const { err, data } = yield utils_1.me(fs_extra_1.readJson(path));
+            if (err) {
+                process.stderr.write('Could not open JSON config file. This was passed as an argument: ' + argv, 'utf-8');
+                return;
+            }
+            const response = yield api_1.invoice(data);
+            process.stdout.write(JSON.stringify(response), 'utf-8');
             // remove config file, no longer needed since it was completed
-            rimraf_1.default(path, () => {
-                // we don't really care too much, but rimraf requires a cb
-            });
-            process.exit();
+            // we don't really care too much what happens, but rimraf requires a cb
+            rimraf_1.default(path, () => { });
         }))();
     }
     ///////////////////////////////
@@ -78,16 +79,15 @@ function cli() {
         const urlOrHtml = argv.shift();
         // can only accept one incoming param, all others ignored
         if (!urlOrHtml) {
-            console.error('A URL or string of HTML must be specified.');
-            process.exit();
+            process.stderr.write('A URL or string of HTML must be specified.', 'utf-8');
+            return;
         }
         (() => __awaiter(this, void 0, void 0, function* () {
             const buf = yield titere_1.inline(urlOrHtml);
             if (buf)
-                process.stdout.write(buf);
+                process.stdout.write(buf, 'utf-8');
             else
-                process.stderr.write('PDF could not be created.\n');
-            process.exit();
+                process.stderr.write('PDF could not be created.\n', 'utf-8');
         }))();
     }
 }

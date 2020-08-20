@@ -36,8 +36,8 @@ export async function invoice(trkIds: string[]): Promise<IResponse> {
 
   // we need these env vars
   if (!URL_INVOICE || !URL_CONTACTS || !URL_LOG) {
-    console.error('One or more ENV variables are missing!');
-    process.exit();
+    process.stderr.write('One or more ENV variables are missing!', 'utf-8');
+    return;
   }
 
   const batch = performance.now().toString();
