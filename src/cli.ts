@@ -122,4 +122,5 @@ function cli() {
 
 }
 
-export default cli;
+const instance = cli();
+export default instance;

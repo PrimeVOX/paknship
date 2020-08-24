@@ -102,5 +102,6 @@ function cli() {
         }))();
     }
 }
-exports.default = cli;
+const instance = cli();
+exports.default = instance;
 //# sourceMappingURL=cli.js.map
