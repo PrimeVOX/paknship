@@ -30,8 +30,7 @@ function cli() {
     Pak'n'Ship
     Commands:
       invoice /path/to/file.json    Send invoice(s) using specified file.
-      inline  <url|string>          Generate single PDF from URL or HTML string, 
-                                      returned as Buffer.
+      inline  <token>               Generate single PDF from token.
     Options:
       -h, --help    displays help.
     `;
@@ -76,14 +75,20 @@ function cli() {
     // INLINE
     ///////////////////////////////
     if (cmd === 'inline') {
-        const urlOrHtml = argv.shift();
+        const token = argv.shift();
         // can only accept one incoming param, all others ignored
-        if (!urlOrHtml) {
+        if (!token) {
             process.stderr.write('A URL or string of HTML must be specified.', 'utf-8');
             return;
         }
+        const URL_INVOICE = process.env.URL_INVOICE;
+        if (!URL_INVOICE) {
+            process.stderr.write('URL_INVOICE ENV variable is missing!', 'utf-8');
+            return;
+        }
         (() => __awaiter(this, void 0, void 0, function* () {
-            const buf = yield titere_1.inline(urlOrHtml);
+            const url = URL_INVOICE + token;
+            const buf = yield titere_1.inline(url);
             if (buf)
                 process.stdout.write(buf, 'utf-8');
             else
