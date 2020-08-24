@@ -35,11 +35,11 @@ function cli() {
       -h, --help    displays help.
     `;
         console.log(help);
-        return;
+        process.exit();
     }
     if (!cmd) {
         process.stderr.write(`A task to run must be specified.`, 'utf-8');
-        return;
+        process.exit();
     }
     ///////////////////////////////
     // INVOICE
@@ -47,7 +47,7 @@ function cli() {
     if (cmd === 'invoice') {
         if (!argv.length) {
             process.stderr.write('No JSON config file was specified to process and send.', 'utf-8');
-            return;
+            process.exit();
         }
         (() => __awaiter(this, void 0, void 0, function* () {
             // should only be a file path, any other args ignored
@@ -56,19 +56,21 @@ function cli() {
             const exists = yield fs_extra_1.pathExists(path);
             if (!exists) {
                 process.stderr.write('Could not open JSON config file. This was passed as an argument: ' + argv, 'utf-8');
-                return;
+                process.exit();
             }
             // try to read it
             const { err, data } = yield utils_1.me(fs_extra_1.readJson(path));
             if (err) {
                 process.stderr.write('Could not open JSON config file. This was passed as an argument: ' + argv, 'utf-8');
-                return;
+                process.exit();
             }
             const response = yield api_1.invoice(data);
             process.stdout.write(JSON.stringify(response), 'utf-8');
             // remove config file, no longer needed since it was completed
             // we don't really care too much what happens, but rimraf requires a cb
-            rimraf_1.default(path, () => { });
+            rimraf_1.default(path, () => {
+                process.exit();
+            });
         }))();
     }
     ///////////////////////////////
@@ -79,23 +81,26 @@ function cli() {
         // can only accept one incoming param, all others ignored
         if (!token) {
             process.stderr.write('A URL or string of HTML must be specified.', 'utf-8');
-            return;
+            process.exit();
         }
         const URL_INVOICE = process.env.URL_INVOICE;
         if (!URL_INVOICE) {
             process.stderr.write('URL_INVOICE ENV variable is missing!', 'utf-8');
-            return;
+            process.exit();
         }
         (() => __awaiter(this, void 0, void 0, function* () {
             const url = URL_INVOICE + token;
             const buf = yield titere_1.inline(url);
-            if (buf)
+            if (buf) {
                 process.stdout.write(buf, 'utf-8');
-            else
+                process.exit();
+            }
+            else {
                 process.stderr.write('PDF could not be created.\n', 'utf-8');
+                process.exit();
+            }
         }))();
     }
 }
-const instance = cli();
-exports.default = instance;
+exports.default = cli;
 //# sourceMappingURL=cli.js.map
