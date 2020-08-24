@@ -47,8 +47,7 @@ function invoice(trkIds) {
         const URL_LOG = process.env.URL_LOG;
         // we need these env vars
         if (!URL_INVOICE || !URL_CONTACTS || !URL_LOG) {
-            process.stderr.write('One or more ENV variables are missing!', 'utf-8');
-            return;
+            throw new Error('One or more ENV variables are missing!');
         }
         const batch = perf_hooks_1.performance.now().toString();
         const response = {

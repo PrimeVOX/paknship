@@ -22,6 +22,7 @@ function cli() {
     Pak'n'Ship
     Commands:
       invoice /path/to/file.json    Send invoice(s) using specified file.
+      inline  <url|string>          Generate & return buffer for inline PDF.
     Options:
       -h, --help    displays help.
     `;
@@ -74,6 +75,37 @@ function cli() {
       rimraf(path, () => {
         process.exit();
       });
+
+    })();
+
+  }
+
+  ///////////////////////////////
+  // INLINE
+  ///////////////////////////////
+
+  if (cmd === 'inline') {
+
+    const urlOrHtml = argv.shift();
+
+    // can only accept one incoming param, all others ignored
+    if (!urlOrHtml) {
+      process.stderr.write('A URL must be specified.', 'utf-8');
+      process.exit();  
+    }
+
+    (async () => {
+
+      const buf = await inline(urlOrHtml);
+
+      if (buf) {
+        process.stdout.write(buf, 'utf-8');
+        process.exit();
+      }
+      else {
+        process.stderr.write('PDF could not be created.\n', 'utf-8');
+        process.exit();
+      }
 
     })();
 
