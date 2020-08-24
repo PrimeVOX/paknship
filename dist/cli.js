@@ -15,7 +15,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const fs_extra_1 = require("fs-extra");
 const rimraf_1 = __importDefault(require("rimraf"));
 const api_1 = require("./api");
-const titere_1 = require("titere");
 const utils_1 = require("./utils");
 function cli() {
     // handle args
@@ -30,7 +29,6 @@ function cli() {
     Pak'n'Ship
     Commands:
       invoice /path/to/file.json    Send invoice(s) using specified file.
-      inline  <token>               Generate single PDF from token.
     Options:
       -h, --help    displays help.
     `;
@@ -73,35 +71,6 @@ function cli() {
             });
         }))();
     }
-    ///////////////////////////////
-    // INLINE
-    ///////////////////////////////
-    if (cmd === 'inline') {
-        const token = argv.shift();
-        // can only accept one incoming param, all others ignored
-        if (!token) {
-            process.stderr.write('A URL or string of HTML must be specified.', 'utf-8');
-            process.exit();
-        }
-        const URL_INVOICE = process.env.URL_INVOICE;
-        if (!URL_INVOICE) {
-            process.stderr.write('URL_INVOICE ENV variable is missing!', 'utf-8');
-            process.exit();
-        }
-        (() => __awaiter(this, void 0, void 0, function* () {
-            const url = URL_INVOICE + token;
-            const buf = yield titere_1.inline(url);
-            if (buf) {
-                process.stdout.write(buf, 'utf-8');
-                process.exit();
-            }
-            else {
-                process.stderr.write('PDF could not be created.\n', 'utf-8');
-                process.exit();
-            }
-        }))();
-    }
 }
-const instance = cli();
-exports.default = instance;
+exports.default = cli;
 //# sourceMappingURL=cli.js.map

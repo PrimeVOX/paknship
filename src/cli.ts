@@ -22,7 +22,6 @@ function cli() {
     Pak'n'Ship
     Commands:
       invoice /path/to/file.json    Send invoice(s) using specified file.
-      inline  <token>               Generate single PDF from token.
     Options:
       -h, --help    displays help.
     `;
@@ -80,47 +79,6 @@ function cli() {
 
   }
 
-  ///////////////////////////////
-  // INLINE
-  ///////////////////////////////
-
-  if (cmd === 'inline') {
-
-    const token = argv.shift();
-
-    // can only accept one incoming param, all others ignored
-    if (!token) {
-      process.stderr.write('A URL or string of HTML must be specified.', 'utf-8');
-      process.exit();  
-    }
-
-    const URL_INVOICE = process.env.URL_INVOICE;
-
-    if (!URL_INVOICE) {
-      process.stderr.write('URL_INVOICE ENV variable is missing!', 'utf-8');
-      process.exit();
-    }  
-
-    (async () => {
-
-      const url = URL_INVOICE + token;
-
-      const buf = await inline(url);
-
-      if (buf) {
-        process.stdout.write(buf, 'utf-8');
-        process.exit();
-      }
-      else {
-        process.stderr.write('PDF could not be created.\n', 'utf-8');
-        process.exit();
-      }
-
-    })();
-
-  }
-
 }
 
-const instance = cli();
-export default instance;
+export default cli;

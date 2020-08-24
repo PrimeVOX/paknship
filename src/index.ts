@@ -1,4 +1,6 @@
 require('dotenv').config();
 import cli from './cli';
 export * from './api';
-export default cli;
+
+// allow running cli
+(() => { cli(); })();
