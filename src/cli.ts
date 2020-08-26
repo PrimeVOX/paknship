@@ -20,7 +20,8 @@ function cli() {
     const help = `
     Pak'n'Ship
     Commands:
-      invoice /path/to/file.json    Send invoice(s) using specified file.
+      invoice-batch /path/to/file.json    Send invoice(s) using specified file.
+      invoice token[]                     Send invoice(s) using token args                 
     Options:
       -h, --help    displays help.
     `;
@@ -34,10 +35,10 @@ function cli() {
   }
   
   ///////////////////////////////
-  // INVOICE
+  // INVOICE BATCH
   ///////////////////////////////
 
-  if (cmd === 'invoice') {
+  if (cmd === 'invoice-batch') {
 
     if (!argv.length) {
       process.stderr.write('No JSON config file was specified to process and send.', 'utf-8');
@@ -73,6 +74,27 @@ function cli() {
       rimraf(path, () => {
         process.exit();
       });
+
+    })();
+
+  }
+
+  ///////////////////////////////
+  // INVOICE
+  ///////////////////////////////
+
+  else if (cmd === 'invoice') {
+
+    if (!argv.length) {
+      process.stderr.write('No invoice tokens specified to process and send.', 'utf-8');
+      process.exit();
+    }
+
+    (async () => {
+
+      const response = await invoice(argv);
+      process.stdout.write(JSON.stringify(response), 'utf-8');
+      process.exit();
 
     })();
 

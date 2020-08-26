@@ -2,23 +2,21 @@ CLI and lib for Puppeteer
 
 ## CLI
 
+### `invoice-batch`
+
+```sh
+$ node ./ invoice-batch <path/to/filename.json>
+```
+
+Pass the filename of a JSON file.  It should contain an array of invoice tracking ID strings, and optionally may include email addresses to override the defaults when emailing the generated invoice PDF file.
+
 ### `invoice`
 
 ```sh
-$ node ./ invoice <filename.json>
+$ node ./ invoice <token>[]
 ```
 
-Pass the filename of a JSON file that has been stored in Pak'n'Ship's `/configs` directory.  It should contain an array of invoice tracking ID strings, and optionally may include email addresses to override the defaults when emailing the generated invoice PDF file.
-
-### `inline`
-
-```sh
-$ node ./ inline <url|string>
-```
-
-You can pass any URL or a complete string of HTML to this command and the PDF will be returned as a Buffer
-
-Only one argument is processed and any other arguments will be ignored.
+Pass one or more tokens as args.  Optionally may include email addresses to override the defaults when emailing the generated invoice PDF file.
 
 ## Library functions
 
