@@ -248,6 +248,11 @@ function charge(tokens) {
             failure: [],
             success: [],
         };
+        const pmtResponse = {
+            type: 'payment',
+            failure: [],
+            success: [],
+        };
         let pakRefs = tokens.reduce((a, c, i) => {
             // see if we have email(s) included
             const parts = c.split('|');
@@ -346,8 +351,8 @@ function charge(tokens) {
                 ];
                 // record charge response separately, won't get handled with the rest
                 if (c.charge.status !== 200) {
-                    response.failure = [
-                        ...response.failure,
+                    pmtResponse.failure = [
+                        ...pmtResponse.failure,
                         {
                             refId: c.refId,
                             message: c.charge.message,
@@ -355,8 +360,8 @@ function charge(tokens) {
                     ];
                 }
                 else {
-                    response.success = [
-                        ...response.success,
+                    pmtResponse.success = [
+                        ...pmtResponse.success,
                         {
                             refId: c.refId,
                             message: 'Charge completed successfully.',
@@ -380,8 +385,8 @@ function charge(tokens) {
                 // handle charge failures
                 if (pak.charge.status !== 200) {
                     // record this as failure, regardless of email success or not
-                    response.failure = [
-                        ...response.failure,
+                    pmtResponse.failure = [
+                        ...pmtResponse.failure,
                         {
                             refId: pak.refId,
                             message: pak.charge.message,
@@ -433,6 +438,15 @@ function charge(tokens) {
                     payload = gunr_1.default.addAttachment(payload, file);
                 }
                 gunr_1.default.sendWithTemplate('receipt', payload, null, (err, body) => {
+                    // charge was successful, record it regardless
+                    pmtResponse.success = [
+                        ...pmtResponse.success,
+                        {
+                            refId: pak.refId,
+                            message: 'Charge completed successfully.',
+                            gunId: '',
+                        }
+                    ];
                     if (err) {
                         // some email failure
                         response.failure = [
@@ -440,15 +454,6 @@ function charge(tokens) {
                             {
                                 refId: pak.refId,
                                 message: 'Unable to send email message.',
-                            }
-                        ];
-                        // charge was successful, still record it
-                        response.success = [
-                            ...response.success,
-                            {
-                                refId: pak.refId,
-                                message: 'Charge completed successfully.',
-                                gunId: '',
                             }
                         ];
                         resolve();
@@ -472,11 +477,13 @@ function charge(tokens) {
         // post to PHP to update correspondence records
         // at this point, not concerned with response or error handling as it isn't critical
         axios_1.default.post(URL_LOG, JSON.stringify(response));
+        axios_1.default.post(URL_LOG, JSON.stringify(pmtResponse));
         // clean up files
         yield titere_1.clean(batch);
         // also returning response in case there's a use where we want to wait for
         // the function to finish and get the response on stdout, prob gets sent to log file
-        return response;
+        // TODO: this shouldn't be limited but we have 2 types of responses here, prefer pmt stuff
+        return pmtResponse;
     });
 }
 exports.charge = charge;
