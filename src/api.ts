@@ -42,6 +42,7 @@ export async function invoice(tokens: string[]): Promise<IResponse> {
   const batch = performance.now().toString();
 
   const response: IResponse = {
+    type: 'invoice-batch',
     failure: [],
     success: [],
   };
@@ -268,6 +269,7 @@ export async function charge(tokens: string[]): Promise<IResponse> {
   const batch = performance.now().toString();
 
   const response: IResponse = {
+    type: 'charge-batch',
     failure: [],
     success: [],
   };

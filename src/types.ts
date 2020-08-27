@@ -14,7 +14,7 @@ export interface ISuccess {
 
 // not sure what we will want here???
 export interface IResponse {
-  // totalProcessed: number;
+  type: string;
   failure: IFailure[];
   success: ISuccess[];
 }

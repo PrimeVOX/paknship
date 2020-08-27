@@ -51,6 +51,7 @@ function invoice(tokens) {
         }
         const batch = perf_hooks_1.performance.now().toString();
         const response = {
+            type: 'invoice-batch',
             failure: [],
             success: [],
         };
@@ -243,6 +244,7 @@ function charge(tokens) {
         }
         const batch = perf_hooks_1.performance.now().toString();
         const response = {
+            type: 'charge-batch',
             failure: [],
             success: [],
         };
