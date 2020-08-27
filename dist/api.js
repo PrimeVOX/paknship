@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.charge = exports.invoice = void 0;
+exports.notify = exports.charge = exports.invoice = void 0;
 const gunr_1 = __importDefault(require("gunr"));
 const p_map_1 = __importDefault(require("p-map"));
 const axios_1 = __importDefault(require("axios"));
@@ -239,7 +239,7 @@ function charge(tokens) {
         const URL_CHARGE = process.env.URL_CHARGE;
         const URL_LOG = process.env.URL_LOG;
         // we need these env vars
-        if (!URL_INVOICE || !URL_CHARGE || !URL_LOG) {
+        if (!URL_INVOICE || !URL_CONTACTS || !URL_CHARGE || !URL_LOG) {
             throw new Error('One or more ENV variables are missing!');
         }
         const batch = perf_hooks_1.performance.now().toString();
@@ -480,4 +480,103 @@ function charge(tokens) {
     });
 }
 exports.charge = charge;
+/**
+ * Send notification with invoice attachment
+ *
+ * @param  {string} template
+ * @param  {string} token
+ * @returns Promise<IResponse>
+ *
+ */
+function notify(template, token) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise((resolve) => __awaiter(this, void 0, void 0, function* () {
+            const URL_INVOICE = process.env.URL_INVOICE;
+            const URL_CONTACTS = process.env.URL_CONTACTS;
+            const URL_LOG = process.env.URL_LOG;
+            // we need these env vars
+            if (!URL_INVOICE || !URL_CONTACTS || !URL_LOG) {
+                throw new Error('One or more ENV variables are missing!');
+            }
+            const batch = perf_hooks_1.performance.now().toString();
+            const response = {
+                type: 'notify',
+                failure: [],
+                success: [],
+            };
+            // generate pdf
+            let pdfs = [
+                {
+                    refId: token,
+                    filename: perf_hooks_1.performance.now().toString(),
+                    urlOrHtml: URL_INVOICE + token,
+                    failed: false,
+                    result: '',
+                }
+            ];
+            // this always resolves, will have updated errors in objects
+            // if there's no file, we can still send notification without attachment, not critical error
+            pdfs = yield titere_1.store(batch, pdfs);
+            // we only have one anyways
+            const pdf = pdfs.shift();
+            // query PHP for emails (using default billing contact(s))
+            const { data: emails } = yield utils_1.me(axios_1.default.post(URL_CONTACTS, JSON.stringify([token])));
+            let to = '';
+            if (emails && typeof emails.data[token] === 'string')
+                to = emails.data[token];
+            // at this point, if there we don't have an email, we can't do what we came here for
+            if (!to) {
+                response.failure = [
+                    ...response.failure,
+                    {
+                        refId: token,
+                        message: 'Unable to retrieve email(s) to send notification.',
+                    }
+                ];
+            }
+            else {
+                // set up payload
+                let payload = {
+                    to: to,
+                };
+                // check for file
+                if (!pdf.failed) {
+                    const file = process.cwd() + '/pdfs/' + batch + '/' + pdf.filename + '.pdf';
+                    payload = gunr_1.default.addAttachment(payload, file);
+                }
+                gunr_1.default.sendWithTemplate(template, payload, null, (err, body) => {
+                    if (err) {
+                        // some email failure
+                        response.failure = [
+                            ...response.failure,
+                            {
+                                refId: token,
+                                message: 'Unable to send email message.',
+                            }
+                        ];
+                    }
+                    // success!
+                    response.success = [
+                        ...response.success,
+                        {
+                            refId: token,
+                            // in some cases, might get empty body
+                            gunId: body && body.id ? body.id : 'No ID provided.',
+                            message: body && body.message ? body.message : 'Email queued successfully.',
+                        }
+                    ];
+                    // post to PHP to update correspondence records
+                    // at this point, not concerned with response or error handling as it isn't critical
+                    axios_1.default.post(URL_LOG, JSON.stringify(response));
+                    // clean up files, we don't really need to wait on this
+                    titere_1.clean(batch);
+                    // also returning response in case there's a use where we want to wait for
+                    // the function to finish and get the response on stdout, prob gets sent to log file
+                    resolve(response);
+                });
+            }
+        }));
+    });
+}
+exports.notify = notify;
 //# sourceMappingURL=api.js.map

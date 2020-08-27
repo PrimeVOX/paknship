@@ -1,6 +1,6 @@
 import { pathExists, readJson } from 'fs-extra';
 import rimraf from 'rimraf';
-import { invoice, charge } from './api';
+import { invoice, charge, notify } from './api';
 import { me } from './utils';
 
 function cli() {
@@ -23,6 +23,7 @@ function cli() {
       invoice-batch </path/to/file.json>    Send invoice(s) using specified file.
       invoice <token>[]                     Send invoice(s) using token args.
       charge-batch </path/to/file.json>     Charge invoices(s) using specified file.
+      notify <template name> <token>        Send specified notification regarding invoice.
     Options:
       -h, --help    displays help.
     `;
@@ -141,6 +142,30 @@ function cli() {
       rimraf(path, () => {
         process.exit();
       });
+
+    })();
+
+  }
+
+  ///////////////////////////////
+  // NOTIFY
+  ///////////////////////////////
+
+  else if (cmd === 'notify') {
+
+    const template = argv.shift();
+    const token = argv.shift();
+
+    if (!template || !token) {
+      process.stderr.write('Missing args for `notify` command.', 'utf-8');
+      process.exit();
+    }
+
+    (async () => {
+
+      const response = await notify(template, token);
+      process.stdout.write(JSON.stringify(response), 'utf-8');
+      process.exit();
 
     })();
 
