@@ -28,8 +28,9 @@ function cli() {
         const help = `
     Pak'n'Ship
     Commands:
-      invoice-batch /path/to/file.json    Send invoice(s) using specified file.
-      invoice token[]                     Send invoice(s) using token args                 
+      invoice-batch </path/to/file.json>    Send invoice(s) using specified file.
+      invoice <token>[]                     Send invoice(s) using token args.
+      charge-batch </path/to/file.json>     Charge invoices(s) using specified file.
     Options:
       -h, --help    displays help.
     `;
@@ -84,6 +85,38 @@ function cli() {
             const response = yield api_1.invoice(argv);
             process.stdout.write(JSON.stringify(response), 'utf-8');
             process.exit();
+        }))();
+    }
+    ///////////////////////////////
+    // CHARGE BATCH
+    ///////////////////////////////
+    else if (cmd === 'charge-batch') {
+        if (!argv.length) {
+            process.stderr.write('No JSON config file was specified to process.', 'utf-8');
+            process.exit();
+        }
+        (() => __awaiter(this, void 0, void 0, function* () {
+            // should only be a file path, any other args ignored
+            const path = argv.shift();
+            // check for file
+            const exists = yield fs_extra_1.pathExists(path);
+            if (!exists) {
+                process.stderr.write('Could not open JSON config file. This was passed as an argument: ' + argv, 'utf-8');
+                process.exit();
+            }
+            // try to read it
+            const { err, data } = yield utils_1.me(fs_extra_1.readJson(path));
+            if (err) {
+                process.stderr.write('Could not open JSON config file. This was passed as an argument: ' + argv, 'utf-8');
+                process.exit();
+            }
+            const response = yield api_1.charge(data);
+            process.stdout.write(JSON.stringify(response), 'utf-8');
+            // remove config file, no longer needed since it was completed
+            // we don't really care too much what happens, but rimraf requires a cb
+            rimraf_1.default(path, () => {
+                process.exit();
+            });
         }))();
     }
 }

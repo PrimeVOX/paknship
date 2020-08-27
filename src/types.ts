@@ -19,9 +19,15 @@ export interface IResponse {
   success: ISuccess[];
 }
 
+export interface ICharge {
+  status: number;
+  message: string;
+}
+
 // a generic object that references some id and may have email info
 export interface IPakRef {
   refId: string;
   email: string;
   data?: string;
+  charge?: ICharge;
 }
