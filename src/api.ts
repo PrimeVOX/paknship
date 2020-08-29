@@ -449,65 +449,68 @@ export async function charge(tokens: string[]): Promise<IResponse> {
         });
 
       }
-
-      // handle successful charges with receipt attached
-
-      // check for file
-      const pdf = pdfs.find(p => p.refId === pak.refId);
-      
-      if (!pdf) {
-        // another failure
-        response.failure = [
-          ...response.failure,
-          {
-            refId: pak.refId,
-            message: 'Unable to find PDF receipt generated for this invoice.',
-          }
-        ];
-
-        // this is successful charge, so continue without attachment
-      }
       else {
-        // add attachment to payload
-        const file = process.cwd() + '/pdfs/' + batch + '/' + pdf.filename + '.pdf';
-        payload = gunr.addAttachment(payload, file);
-      }
-      
-      gunr.sendWithTemplate('receipt', payload, null, (err, body) => {
+        // handle successful charges with receipt attached
 
-        if (err) {
-          // some email failure
+        // check for file
+        const pdf = pdfs.find(p => p.refId === pak.refId);
+        
+        if (!pdf) {
+          // another failure
           response.failure = [
             ...response.failure,
             {
               refId: pak.refId,
-              message: 'Unable to send email message.',
+              message: 'Unable to find PDF receipt generated for this invoice.',
+            }
+          ];
+
+          // this is successful charge, so continue without attachment
+        }
+        else {
+          // add attachment to payload
+          const file = process.cwd() + '/pdfs/' + batch + '/' + pdf.filename + '.pdf';
+          payload = gunr.addAttachment(payload, file);
+        }
+        
+        gunr.sendWithTemplate('receipt', payload, null, (err, body) => {
+
+          if (err) {
+            // some email failure
+            response.failure = [
+              ...response.failure,
+              {
+                refId: pak.refId,
+                message: 'Unable to send email message.',
+              }
+            ];
+
+            resolve();
+          }
+
+          // success!
+          response.success = [
+            ...response.success,
+            {
+              refId: pak.refId,
+              // in some cases, might get empty body
+              gunId: body && body.id ? body.id : 'No ID provided.',
+              message: 'Receipt sent successfully.',
             }
           ];
 
           resolve();
-        }
 
-        // success!
-        response.success = [
-          ...response.success,
-          {
-            refId: pak.refId,
-            // in some cases, might get empty body
-            gunId: body && body.id ? body.id : 'No ID provided.',
-            message: 'Receipt sent successfully.',
-          }
-        ];
-
-        resolve();
-
-      });
+        });
+      }
       
     });
   };
 
   // batch out mails, always resolves
-  await pMap(pakRefs, doEmail, { concurrency: 10 });
+  // NOTE: ONE AT A TIME TO ENSURE CORRECT TEMPLATE GETS USED WITH GUNR INSTANCE
+  // SINCE THIS FUNCTION MAY NOT ALL USE THE SAME ONE
+  await pMap(pakRefs, doEmail, { concurrency: 1 });
 
   // post to PHP to update correspondence records
   // at this point, not concerned with response or error handling as it isn't critical
