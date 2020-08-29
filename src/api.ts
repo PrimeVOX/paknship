@@ -268,14 +268,9 @@ export async function charge(tokens: string[]): Promise<IResponse> {
 
   const batch = performance.now().toString();
 
+  // NOTE: payment errors get logged from php side, only concerned with mailing data here
   const response: IResponse = {
     type: 'charge-batch',
-    failure: [],
-    success: [],
-  };
-
-  const pmtResponse: IResponse = {
-    type: 'payment',
     failure: [],
     success: [],
   };
@@ -402,27 +397,6 @@ export async function charge(tokens: string[]): Promise<IResponse> {
         }
       ];
 
-      // record charge response separately, won't get handled with the rest
-      if (c.charge.status !== 200) {
-        pmtResponse.failure = [
-          ...pmtResponse.failure,
-          {
-            refId: c.refId,
-            message: c.charge.message,
-          }
-        ];
-      }
-      else {
-        pmtResponse.success = [
-          ...pmtResponse.success,
-          {
-            refId: c.refId,
-            message: 'Charge completed successfully.',
-            gunId: '', // was not sent
-          }
-        ];
-      }
-  
       // do not include
       return a;
     }
@@ -442,15 +416,6 @@ export async function charge(tokens: string[]): Promise<IResponse> {
 
       // handle charge failures
       if (pak.charge.status !== 200) {
-
-        // record this as failure, regardless of email success or not
-        pmtResponse.failure = [
-          ...pmtResponse.failure,
-          {
-            refId: pak.refId,
-            message: pak.charge.message,
-          }
-        ];
 
         // send off charge failure email
         gunr.sendWithTemplate('chargefail', payload, null, (err, body) => {
@@ -510,16 +475,6 @@ export async function charge(tokens: string[]): Promise<IResponse> {
       
       gunr.sendWithTemplate('receipt', payload, null, (err, body) => {
 
-        // charge was successful, record it regardless
-        pmtResponse.success = [
-          ...pmtResponse.success,
-          {
-            refId: pak.refId,
-            message: 'Charge completed successfully.',
-            gunId: '',
-          }
-        ]
-
         if (err) {
           // some email failure
           response.failure = [
@@ -540,7 +495,7 @@ export async function charge(tokens: string[]): Promise<IResponse> {
             refId: pak.refId,
             // in some cases, might get empty body
             gunId: body && body.id ? body.id : 'No ID provided.',
-            message: 'Charge completed successfully.',
+            message: 'Receipt sent successfully.',
           }
         ];
 
@@ -557,15 +512,13 @@ export async function charge(tokens: string[]): Promise<IResponse> {
   // post to PHP to update correspondence records
   // at this point, not concerned with response or error handling as it isn't critical
   axios.post(URL_LOG, JSON.stringify(response));
-  axios.post(URL_LOG, JSON.stringify(pmtResponse));
 
   // clean up files
   await clean(batch);
 
   // also returning response in case there's a use where we want to wait for
   // the function to finish and get the response on stdout, prob gets sent to log file
-  // TODO: this shouldn't be limited but we have 2 types of responses here, prefer pmt stuff
-  return pmtResponse;
+  return response;
 
 }
 

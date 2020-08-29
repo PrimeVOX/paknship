@@ -243,13 +243,9 @@ function charge(tokens) {
             throw new Error('One or more ENV variables are missing!');
         }
         const batch = perf_hooks_1.performance.now().toString();
+        // NOTE: payment errors get logged from php side, only concerned with mailing data here
         const response = {
             type: 'charge-batch',
-            failure: [],
-            success: [],
-        };
-        const pmtResponse = {
-            type: 'payment',
             failure: [],
             success: [],
         };
@@ -349,26 +345,6 @@ function charge(tokens) {
                         message: 'Unable to retrieve email to send receipt.',
                     }
                 ];
-                // record charge response separately, won't get handled with the rest
-                if (c.charge.status !== 200) {
-                    pmtResponse.failure = [
-                        ...pmtResponse.failure,
-                        {
-                            refId: c.refId,
-                            message: c.charge.message,
-                        }
-                    ];
-                }
-                else {
-                    pmtResponse.success = [
-                        ...pmtResponse.success,
-                        {
-                            refId: c.refId,
-                            message: 'Charge completed successfully.',
-                            gunId: '',
-                        }
-                    ];
-                }
                 // do not include
                 return a;
             }
@@ -384,14 +360,6 @@ function charge(tokens) {
                 };
                 // handle charge failures
                 if (pak.charge.status !== 200) {
-                    // record this as failure, regardless of email success or not
-                    pmtResponse.failure = [
-                        ...pmtResponse.failure,
-                        {
-                            refId: pak.refId,
-                            message: pak.charge.message,
-                        }
-                    ];
                     // send off charge failure email
                     gunr_1.default.sendWithTemplate('chargefail', payload, null, (err, body) => {
                         if (err) {
@@ -438,15 +406,6 @@ function charge(tokens) {
                     payload = gunr_1.default.addAttachment(payload, file);
                 }
                 gunr_1.default.sendWithTemplate('receipt', payload, null, (err, body) => {
-                    // charge was successful, record it regardless
-                    pmtResponse.success = [
-                        ...pmtResponse.success,
-                        {
-                            refId: pak.refId,
-                            message: 'Charge completed successfully.',
-                            gunId: '',
-                        }
-                    ];
                     if (err) {
                         // some email failure
                         response.failure = [
@@ -465,7 +424,7 @@ function charge(tokens) {
                             refId: pak.refId,
                             // in some cases, might get empty body
                             gunId: body && body.id ? body.id : 'No ID provided.',
-                            message: 'Charge completed successfully.',
+                            message: 'Receipt sent successfully.',
                         }
                     ];
                     resolve();
@@ -477,13 +436,11 @@ function charge(tokens) {
         // post to PHP to update correspondence records
         // at this point, not concerned with response or error handling as it isn't critical
         axios_1.default.post(URL_LOG, JSON.stringify(response));
-        axios_1.default.post(URL_LOG, JSON.stringify(pmtResponse));
         // clean up files
         yield titere_1.clean(batch);
         // also returning response in case there's a use where we want to wait for
         // the function to finish and get the response on stdout, prob gets sent to log file
-        // TODO: this shouldn't be limited but we have 2 types of responses here, prefer pmt stuff
-        return pmtResponse;
+        return response;
     });
 }
 exports.charge = charge;
